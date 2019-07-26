@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Boni Garcia (http://bonigarcia.github.io/)
+ * (C) Copyright 2019 Boni Garcia (http://bonigarcia.github.io/)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,40 @@
  */
 package io.github.bonigarcia.wdm.test;
 
-import static io.github.bonigarcia.wdm.WebDriverManager.edgedriver;
 import static java.lang.invoke.MethodHandles.lookup;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.hasItems;
+import static org.junit.Assert.assertThat;
 import static org.slf4j.LoggerFactory.getLogger;
 
-import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Test;
 import org.slf4j.Logger;
 
+import io.github.bonigarcia.wdm.WebDriverManager;
+
 /**
- * Test with Microsoft Edge forcing to extract MSI file.
+ * Test asserting Edge driver versions.
  *
  * @author Boni Garcia (boni.gg@gmail.com)
- * @since 2.1.0
+ * @since 3.5.0
  */
-public class EdgeMsiTest {
+public class EdgeReadVersionTest {
 
     final Logger log = getLogger(lookup().lookupClass());
 
     @Test
-    public void testMsiInWindows() {
-        edgedriver().version("2.10586").setup();
-        File binary = new File(edgedriver().getBinaryPath());
-        log.debug("Edge driver {}", binary);
-        assertTrue(binary.getName().endsWith(".exe"));
+    public void edgeVersionsTest() {
+        String[] expectedVersions = { "1.10240", "2.10586", "3.14393",
+                "4.15063", "5.16299", "6.17134", "75.0.139.20", "76.0.183.0" };
+        List<String> versions = WebDriverManager.edgedriver().getVersions();
+
+        log.debug("Expected edge versions: {}",
+                Arrays.asList(expectedVersions));
+        log.debug("Edge versions read from the web page: {}", versions);
+
+        assertThat(versions, hasItems(expectedVersions));
     }
 
 }

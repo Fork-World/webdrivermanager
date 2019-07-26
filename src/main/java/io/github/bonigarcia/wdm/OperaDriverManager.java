@@ -17,12 +17,12 @@
 package io.github.bonigarcia.wdm;
 
 import static io.github.bonigarcia.wdm.DriverManagerType.OPERA;
-import static java.util.Arrays.asList;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Manager for Opera.
@@ -32,22 +32,44 @@ import java.util.List;
  */
 public class OperaDriverManager extends WebDriverManager {
 
-    public static synchronized WebDriverManager getInstance() {
-        return operadriver();
-    }
-
-    public OperaDriverManager() {
-        driverManagerType = OPERA;
-        exportParameterKey = "wdm.operaDriverExport";
-        driverVersionKey = "wdm.operaDriverVersion";
-        driverUrlKey = "wdm.operaDriverUrl";
-        driverMirrorUrlKey = "wdm.operaDriverMirrorUrl";
-        driverName = asList("operadriver");
+    @Override
+    protected DriverManagerType getDriverManagerType() {
+        return OPERA;
     }
 
     @Override
-    protected List<URL> getDrivers() throws IOException {
-        return getDriversFromGitHub();
+    protected String getDriverName() {
+        return "operadriver";
+    }
+
+    @Override
+    protected String getDriverVersion() {
+        return config().getOperaDriverVersion();
+    }
+
+    @Override
+    protected URL getDriverUrl() {
+        return getDriverUrlCkeckingMirror(config().getOperaDriverUrl());
+    }
+
+    @Override
+    protected Optional<URL> getMirrorUrl() {
+        return Optional.of(config().getOperaDriverMirrorUrl());
+    }
+
+    @Override
+    protected Optional<String> getExportParameter() {
+        return Optional.of(config().getOperaDriverExport());
+    }
+
+    @Override
+    protected void setDriverVersion(String version) {
+        config().setOperaDriverVersion(version);
+    }
+
+    @Override
+    protected void setDriverUrl(URL url) {
+        config().setOperaDriverUrl(url);
     }
 
     @Override
@@ -61,6 +83,11 @@ public class OperaDriverManager extends WebDriverManager {
                     url.getFile().indexOf(SLASH + "v") + 2,
                     url.getFile().lastIndexOf(SLASH));
         }
+    }
+
+    @Override
+    protected List<URL> getDrivers() throws IOException {
+        return getDriversFromGitHub();
     }
 
     @Override
@@ -85,8 +112,7 @@ public class OperaDriverManager extends WebDriverManager {
                     }
                     operadriver = listFiles[i];
                     isOperaDriver = config().isExecutable(operadriver)
-                            && operadriver.getName()
-                                    .contains(getDriverName().get(0));
+                            && operadriver.getName().contains(getDriverName());
                     i++;
                     log.trace("{} is valid: {}", operadriver, isOperaDriver);
                 } while (!isOperaDriver);
@@ -104,6 +130,14 @@ public class OperaDriverManager extends WebDriverManager {
         } else {
             return super.postDownload(archive);
         }
+    }
+
+    @Override
+    protected Optional<String> getBrowserVersion() {
+        return getDefaultBrowserVersion("PROGRAMFILES",
+                "\\\\Opera\\\\launcher.exe", "opera",
+                "/Applications/Opera.app/Contents/MacOS/Opera", "--version",
+                "");
     }
 
 }

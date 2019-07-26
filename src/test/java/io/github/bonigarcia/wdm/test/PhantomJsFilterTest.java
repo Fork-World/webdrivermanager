@@ -18,7 +18,6 @@ package io.github.bonigarcia.wdm.test;
 
 import static io.github.bonigarcia.wdm.Architecture.X64;
 import static java.lang.invoke.MethodHandles.lookup;
-import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.junit.Assert.assertThat;
@@ -34,8 +33,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 
+import io.github.bonigarcia.wdm.Config;
 import io.github.bonigarcia.wdm.HttpClient;
-import io.github.bonigarcia.wdm.PhantomJsDriverManager;
 import io.github.bonigarcia.wdm.UrlFilter;
 import io.github.bonigarcia.wdm.WebDriverManager;
 
@@ -49,21 +48,21 @@ public class PhantomJsFilterTest {
 
     final Logger log = getLogger(lookup().lookupClass());
 
-    protected WebDriverManager phatomJsManager;
+    protected WebDriverManager phantomJsManager;
     protected List<URL> driversUrls;
     protected final String phantomJsBinaryName = "phantomjs";
 
     @Before
     @SuppressWarnings("unchecked")
     public void setup() throws Exception {
-        phatomJsManager = PhantomJsDriverManager.getInstance();
+        phantomJsManager = WebDriverManager.phantomjs();
         Field field = WebDriverManager.class.getDeclaredField("httpClient");
         field.setAccessible(true);
-        field.set(phatomJsManager, new HttpClient());
+        field.set(phantomJsManager, new HttpClient(new Config()));
 
         Method method = WebDriverManager.class.getDeclaredMethod("getDrivers");
         method.setAccessible(true);
-        driversUrls = (List<URL>) method.invoke(phatomJsManager);
+        driversUrls = (List<URL>) method.invoke(phantomJsManager);
     }
 
     @Test
@@ -71,11 +70,11 @@ public class PhantomJsFilterTest {
     public void testFilterPhantomJs() throws NoSuchMethodException,
             SecurityException, IllegalAccessException, IllegalArgumentException,
             InvocationTargetException {
-        Method method = WebDriverManager.class.getDeclaredMethod("getLatest",
-                List.class, List.class);
+        Method method = WebDriverManager.class.getDeclaredMethod("checkLatest",
+                List.class, String.class);
         method.setAccessible(true);
-        List<URL> latestUrls = (List<URL>) method.invoke(phatomJsManager,
-                driversUrls, asList(phantomJsBinaryName));
+        List<URL> latestUrls = (List<URL>) method.invoke(phantomJsManager,
+                driversUrls, phantomJsBinaryName);
 
         List<URL> filteredLatestUrls = new UrlFilter().filterByArch(latestUrls,
                 X64, false);
@@ -93,10 +92,10 @@ public class PhantomJsFilterTest {
             InvocationTargetException {
         String specificVersion = "1.9.6";
         Method method = WebDriverManager.class.getDeclaredMethod("getVersion",
-                List.class, List.class, String.class);
+                List.class, String.class, String.class);
         method.setAccessible(true);
         List<URL> specificVersionUrls = (List<URL>) method.invoke(
-                phatomJsManager, driversUrls, asList(phantomJsBinaryName),
+                phantomJsManager, driversUrls, phantomJsBinaryName,
                 specificVersion);
 
         List<URL> filteredVersionUrls = new UrlFilter()

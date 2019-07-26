@@ -17,11 +17,15 @@
 package io.github.bonigarcia.wdm;
 
 import static io.github.bonigarcia.wdm.DriverManagerType.CHROME;
-import static java.util.Arrays.asList;
+import static java.nio.charset.Charset.defaultCharset;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
+
+import org.apache.commons.io.IOUtils;
 
 /**
  * Manager for Chrome.
@@ -31,22 +35,49 @@ import java.util.List;
  */
 public class ChromeDriverManager extends WebDriverManager {
 
-    public static synchronized WebDriverManager getInstance() {
-        return chromedriver();
+    @Override
+    protected DriverManagerType getDriverManagerType() {
+        return CHROME;
     }
 
-    public ChromeDriverManager() {
-        driverManagerType = CHROME;
-        exportParameterKey = "wdm.chromeDriverExport";
-        driverVersionKey = "wdm.chromeDriverVersion";
-        driverUrlKey = "wdm.chromeDriverUrl";
-        driverMirrorUrlKey = "wdm.chromeDriverMirrorUrl";
-        driverName = asList("chromedriver");
+    @Override
+    protected String getDriverName() {
+        return "chromedriver";
+    }
+
+    @Override
+    protected String getDriverVersion() {
+        return config().getChromeDriverVersion();
+    }
+
+    @Override
+    protected URL getDriverUrl() {
+        return getDriverUrlCkeckingMirror(config().getChromeDriverUrl());
+    }
+
+    @Override
+    protected Optional<URL> getMirrorUrl() {
+        return Optional.of(config().getChromeDriverMirrorUrl());
+    }
+
+    @Override
+    protected Optional<String> getExportParameter() {
+        return Optional.of(config().getChromeDriverExport());
+    }
+
+    @Override
+    protected void setDriverVersion(String version) {
+        config().setChromeDriverVersion(version);
+    }
+
+    @Override
+    protected void setDriverUrl(URL url) {
+        config().setChromeDriverUrl(url);
     }
 
     @Override
     protected List<URL> getDrivers() throws IOException {
-        URL driverUrl = config().getDriverUrl(driverUrlKey);
+        URL driverUrl = getDriverUrl();
         List<URL> urls;
         if (isUsingTaobaoMirror()) {
             urls = getDriversFromMirror(driverUrl);
@@ -65,6 +96,35 @@ public class ChromeDriverManager extends WebDriverManager {
         } else {
             return super.getCurrentVersion(url, driverName);
         }
+    }
+
+    @Override
+    protected Optional<String> getBrowserVersion() {
+        return getDefaultBrowserVersion(getProgramFilesEnv(),
+                "\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe",
+                "google-chrome",
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "--version", getDriverManagerType().toString());
+    }
+
+    @Override
+    protected Optional<String> getLatestVersion() {
+        String url = config().getChromeDriverUrl() + "LATEST_RELEASE";
+        Optional<String> version = Optional.empty();
+        try {
+            InputStream response = httpClient
+                    .execute(httpClient.createHttpGet(new URL(url))).getEntity()
+                    .getContent();
+            version = Optional.of(IOUtils.toString(response, defaultCharset()));
+        } catch (Exception e) {
+            log.warn("Exception reading {} to get latest version of {}", url,
+                    getDriverName(), e);
+        }
+        if (version.isPresent()) {
+            log.debug("Latest version of {} according to {} is {}",
+                    getDriverName(), url, version.get());
+        }
+        return version;
     }
 
 }

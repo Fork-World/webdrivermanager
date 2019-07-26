@@ -16,15 +16,15 @@
  */
 package io.github.bonigarcia.wdm;
 
-import static io.github.bonigarcia.wdm.Config.listToString;
 import static io.github.bonigarcia.wdm.DriverManagerType.PHANTOMJS;
 import static java.io.File.separator;
-import static java.util.Arrays.asList;
+import static java.util.Optional.empty;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Manager for PhantomJs.
@@ -34,26 +34,50 @@ import java.util.List;
  */
 public class PhantomJsDriverManager extends WebDriverManager {
 
-    private static final String BETA = "beta";
-
-    public static synchronized WebDriverManager getInstance() {
-        return phantomjs();
+    @Override
+    protected DriverManagerType getDriverManagerType() {
+        return PHANTOMJS;
     }
 
-    public PhantomJsDriverManager() {
-        driverManagerType = PHANTOMJS;
-        exportParameterKey = "wdm.phantomjsDriverExport";
-        driverVersionKey = "wdm.phantomjsDriverVersion";
-        driverUrlKey = "wdm.phantomjsDriverUrl";
-        driverMirrorUrlKey = "wdm.phantomjsDriverMirrorUrl";
-        driverName = asList("phantomjs");
+    @Override
+    protected String getDriverName() {
+        return "phantomjs";
+    }
+
+    @Override
+    protected String getDriverVersion() {
+        return config().getPhantomjsDriverVersion();
+    }
+
+    @Override
+    protected URL getDriverUrl() {
+        return getDriverUrlCkeckingMirror(config().getPhantomjsDriverUrl());
+    }
+
+    @Override
+    protected Optional<URL> getMirrorUrl() {
+        return Optional.of(config().getPhantomjsDriverMirrorUrl());
+    }
+
+    @Override
+    protected Optional<String> getExportParameter() {
+        return Optional.of(config().getPhantomjsDriverExport());
+    }
+
+    @Override
+    protected void setDriverVersion(String version) {
+        config().setPhantomjsDriverVersion(version);
+    }
+
+    @Override
+    protected void setDriverUrl(URL url) {
+        config().setPhantomjsDriverUrl(url);
     }
 
     @Override
     protected List<URL> getDrivers() throws IOException {
-        URL driverUrl = config().getDriverUrl(driverUrlKey);
-        String driverNameString = listToString(getDriverName());
-        log.info("Reading {} to seek {}", driverUrl, driverNameString);
+        URL driverUrl = getDriverUrl();
+        log.info("Reading {} to seek {}", driverUrl, getDriverName());
         return getDriversFromMirror(driverUrl);
     }
 
@@ -98,11 +122,12 @@ public class PhantomJsDriverManager extends WebDriverManager {
 
     @Override
     protected File postDownload(File archive) {
-        log.trace("PhatomJS package name: {}", archive);
+        log.trace("PhantomJS package name: {}", archive);
 
         File extractFolder = archive.getParentFile()
                 .listFiles(getFolderFilter())[0];
-        log.trace("PhatomJS extract folder (to be deleted): {}", extractFolder);
+        log.trace("PhantomJS extract folder (to be deleted): {}",
+                extractFolder);
 
         File binFolder = new File(
                 extractFolder.getAbsoluteFile() + separator + "bin");
@@ -113,18 +138,24 @@ public class PhantomJsDriverManager extends WebDriverManager {
             binaryIndex = 3;
         }
 
-        log.trace("PhatomJS bin folder: {} (index {})", binFolder, binaryIndex);
+        log.trace("PhantomJS bin folder: {} (index {})", binFolder,
+                binaryIndex);
 
         File phantomjs = binFolder.listFiles()[binaryIndex];
-        log.trace("PhatomJS binary: {}", phantomjs);
+        log.trace("PhantomJS binary: {}", phantomjs);
 
         File target = new File(archive.getParentFile().getAbsolutePath(),
                 phantomjs.getName());
-        log.trace("PhatomJS target: {}", target);
+        log.trace("PhantomJS target: {}", target);
 
         downloader.renameFile(phantomjs, target);
         downloader.deleteFolder(extractFolder);
         return target;
+    }
+
+    @Override
+    protected Optional<String> getBrowserVersion() {
+        return empty();
     }
 
 }

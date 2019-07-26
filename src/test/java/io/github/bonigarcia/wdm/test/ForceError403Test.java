@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Boni Garcia (http://bonigarcia.github.io/)
+ * (C) Copyright 2019 Boni Garcia (http://bonigarcia.github.io/)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,36 @@
  */
 package io.github.bonigarcia.wdm.test;
 
-import static io.github.bonigarcia.wdm.WebDriverManager.edgedriver;
+import static io.github.bonigarcia.wdm.WebDriverManager.firefoxdriver;
 import static java.lang.invoke.MethodHandles.lookup;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertThat;
 import static org.slf4j.LoggerFactory.getLogger;
 
-import java.io.File;
-
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 
 /**
- * Test with Microsoft Edge forcing to extract MSI file.
+ * Force download test.
  *
  * @author Boni Garcia (boni.gg@gmail.com)
- * @since 2.1.0
+ * @since 3.3.0
  */
-public class EdgeMsiTest {
+public class ForceError403Test {
 
     final Logger log = getLogger(lookup().lookupClass());
 
+    static final int NUM = 40;
+
+    @Ignore
     @Test
-    public void testMsiInWindows() {
-        edgedriver().version("2.10586").setup();
-        File binary = new File(edgedriver().getBinaryPath());
-        log.debug("Edge driver {}", binary);
-        assertTrue(binary.getName().endsWith(".exe"));
+    public void test403() {
+        for (int i = 0; i < NUM; i++) {
+            log.debug("Forcing 403 error {}/{}", i + 1, NUM);
+            firefoxdriver().avoidAutoVersion().avoidPreferences().setup();
+            assertThat(firefoxdriver().getBinaryPath(), notNullValue());
+        }
     }
 
 }

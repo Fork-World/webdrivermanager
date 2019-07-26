@@ -16,36 +16,42 @@
  */
 package io.github.bonigarcia.wdm.test;
 
+import static io.github.bonigarcia.wdm.WebDriverManager.seleniumServerStandalone;
+import static java.lang.invoke.MethodHandles.lookup;
 import static org.junit.Assert.assertTrue;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.File;
 
 import org.junit.Test;
-
-import io.github.bonigarcia.wdm.WebDriverManager;
+import org.slf4j.Logger;
 
 /**
- * Using different properties.
+ * Test with Selenium Server.
  *
  * @author Boni Garcia (boni.gg@gmail.com)
- * @since 2.1.1
+ * @since 3.0.1
  */
-public class PropertiesTest {
+public class SeleniumServerStandaloneTest {
+
+    final Logger log = getLogger(lookup().lookupClass());
 
     @Test
-    public void testCustomProperties() {
-        WebDriverManager chromedriver = WebDriverManager.chromedriver();
-        chromedriver.config().setProperties("wdm-test.properties");
-        chromedriver.setup();
-        String binaryPath = chromedriver.getBinaryPath();
-        File binary = new File(binaryPath);
-        assertTrue(binary.exists());
+    public void testSeleniumServerLatest() {
+        seleniumServerStandalone().setup();
+        assertBinary();
     }
 
     @Test
-    public void testEmptyProperties() {
-        WebDriverManager.chromedriver().properties("").setup();
-        assertTrue(true);
+    public void testSeleniumServerVersion() {
+        seleniumServerStandalone().version("3.13").setup();
+        assertBinary();
+    }
+
+    private void assertBinary() {
+        File binary = new File(seleniumServerStandalone().getBinaryPath());
+        log.debug("Binary path for selenium-server-standalone {}", binary);
+        assertTrue(binary.exists());
     }
 
 }

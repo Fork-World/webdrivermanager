@@ -17,11 +17,11 @@
 package io.github.bonigarcia.wdm;
 
 import static io.github.bonigarcia.wdm.DriverManagerType.FIREFOX;
-import static java.util.Arrays.asList;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Manager for Firefox.
@@ -31,17 +31,44 @@ import java.util.List;
  */
 public class FirefoxDriverManager extends WebDriverManager {
 
-    public static synchronized WebDriverManager getInstance() {
-        return firefoxdriver();
+    @Override
+    protected DriverManagerType getDriverManagerType() {
+        return FIREFOX;
     }
 
-    public FirefoxDriverManager() {
-        driverManagerType = FIREFOX;
-        exportParameterKey = "wdm.geckoDriverExport";
-        driverVersionKey = "wdm.geckoDriverVersion";
-        driverUrlKey = "wdm.geckoDriverUrl";
-        driverMirrorUrlKey = "wdm.geckoDriverMirrorUrl";
-        driverName = asList("wires", "geckodriver");
+    @Override
+    protected String getDriverName() {
+        return "geckodriver";
+    }
+
+    @Override
+    protected String getDriverVersion() {
+        return config().getFirefoxDriverVersion();
+    }
+
+    @Override
+    protected URL getDriverUrl() {
+        return getDriverUrlCkeckingMirror(config().getFirefoxDriverUrl());
+    }
+
+    @Override
+    protected Optional<URL> getMirrorUrl() {
+        return Optional.of(config().getFirefoxDriverMirrorUrl());
+    }
+
+    @Override
+    protected Optional<String> getExportParameter() {
+        return Optional.of(config().getFirefoxDriverExport());
+    }
+
+    @Override
+    protected void setDriverVersion(String version) {
+        config().setFirefoxDriverVersion(version);
+    }
+
+    @Override
+    protected void setDriverUrl(URL url) {
+        config().setFirefoxDriverUrl(url);
     }
 
     @Override
@@ -77,6 +104,14 @@ public class FirefoxDriverManager extends WebDriverManager {
                 + target.substring(iDash + 1, iPoint).toLowerCase()
                 + target.substring(iSeparator);
         return target;
+    }
+
+    @Override
+    protected Optional<String> getBrowserVersion() {
+        return getDefaultBrowserVersion(getProgramFilesEnv(),
+                "\\\\Mozilla Firefox\\\\firefox.exe", "firefox",
+                "/Applications/Firefox.app/Contents/MacOS/firefox", "-v",
+                getDriverManagerType().toString());
     }
 
 }

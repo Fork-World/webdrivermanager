@@ -16,7 +16,6 @@
  */
 package io.github.bonigarcia.wdm;
 
-import static io.github.bonigarcia.wdm.WebDriverManager.config;
 import static java.io.File.separator;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.invoke.MethodHandles.lookup;
@@ -43,7 +42,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -64,15 +62,19 @@ public class Downloader {
 
     DriverManagerType driverManagerType;
     HttpClient httpClient;
+    Config config;
 
     public Downloader(DriverManagerType driverManagerType) {
         this.driverManagerType = driverManagerType;
-        httpClient = WebDriverManager.getInstance(driverManagerType)
-                .getHttpClient();
+
+        WebDriverManager webDriverManager = WebDriverManager
+                .getInstance(driverManagerType);
+        config = webDriverManager.config();
+        httpClient = webDriverManager.getHttpClient();
     }
 
     public synchronized String download(URL url, String version,
-            List<String> driverName) throws IOException, InterruptedException {
+            String driverName) throws IOException, InterruptedException {
         File targetFile = getTarget(version, url);
         Optional<File> binary = checkBinary(driverName, targetFile);
         if (!binary.isPresent()) {
@@ -98,7 +100,7 @@ public class Downloader {
                 .replace(".tar.bz2", "").replace(".tar.gz", "")
                 .replace(".msi", "").replace(".exe", "")
                 .replace("_", separator);
-        String path = config().isAvoidOutputTree() ? getTargetPath() + zip
+        String path = config.isAvoidOutputTree() ? getTargetPath() + zip
                 : getTargetPath() + folder + separator + version + zip;
         String target = WebDriverManager.getInstance(driverManagerType)
                 .preDownload(path, version);
@@ -110,7 +112,7 @@ public class Downloader {
     }
 
     public String getTargetPath() {
-        String targetPath = config().getTargetPath();
+        String targetPath = config.getTargetPath();
         log.trace("Target path {}", targetPath);
 
         // Create repository folder if not exits
@@ -137,14 +139,14 @@ public class Downloader {
         File resultingBinary = new File(targetFolder, extractedFile.getName());
         boolean binaryExists = resultingBinary.exists();
 
-        if (!binaryExists || config().isOverride()) {
+        if (!binaryExists || config.isOverride()) {
             if (binaryExists) {
                 log.info("Overriding former binary {}", resultingBinary);
                 deleteFile(resultingBinary);
             }
             moveFileToDirectory(extractedFile, targetFolder, true);
         }
-        if (!config().isExecutable(resultingBinary)) {
+        if (!config.isExecutable(resultingBinary)) {
             setFileExecutable(resultingBinary);
         }
         deleteFolder(tempDir);
@@ -153,20 +155,17 @@ public class Downloader {
         return of(resultingBinary);
     }
 
-    private Optional<File> checkBinary(List<String> driverName,
-            File targetFile) {
+    private Optional<File> checkBinary(String driverName, File targetFile) {
         File parentFolder = targetFile.getParentFile();
-        if (parentFolder.exists() && !config().isOverride()) {
+        if (parentFolder.exists() && !config.isOverride()) {
             // Check if binary exits in parent folder and it is valid
 
             Collection<File> listFiles = listFiles(parentFolder, null, true);
             for (File file : listFiles) {
-                for (String s : driverName) {
-                    if (file.getName().startsWith(s)
-                            && config().isExecutable(file)) {
-                        log.info("Using binary driver previously downloaded");
-                        return of(file);
-                    }
+                if (file.getName().startsWith(driverName)
+                        && config.isExecutable(file)) {
+                    log.info("Using binary driver previously downloaded");
+                    return of(file);
                 }
             }
             log.trace("{} does not exist in cache", driverName);
@@ -177,8 +176,12 @@ public class Downloader {
     private File extract(File compressedFile)
             throws IOException, InterruptedException {
         String fileName = compressedFile.getName().toLowerCase();
-        log.info("Extracting binary from compressed file {}", fileName);
 
+        boolean extractFile = !fileName.endsWith("exe")
+                && !fileName.endsWith("jar");
+        if (extractFile) {
+            log.info("Extracting binary from compressed file {}", fileName);
+        }
         if (fileName.endsWith("tar.bz2")) {
             unBZip2(compressedFile);
         } else if (fileName.endsWith("tar.gz")) {
@@ -190,7 +193,8 @@ public class Downloader {
         } else if (fileName.endsWith("zip")) {
             unZip(compressedFile);
         }
-        if (!fileName.endsWith("exe")) {
+
+        if (extractFile) {
             deleteFile(compressedFile);
         }
 
@@ -216,7 +220,7 @@ public class Downloader {
                         name, size, compressedSize);
 
                 file = new File(compressedFile.getParentFile(), name);
-                if (!file.exists() || config().isOverride()) {
+                if (!file.exists() || config.isOverride()) {
                     if (name.endsWith("/")) {
                         file.mkdirs();
                         continue;

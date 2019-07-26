@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2015 Boni Garcia (http://bonigarcia.github.io/)
+ * (C) Copyright 2018 Boni Garcia (http://bonigarcia.github.io/)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,39 +16,34 @@
  */
 package io.github.bonigarcia.wdm.test;
 
-import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.junit.Assume.assumeTrue;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.edge.EdgeDriver;
-import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import io.github.bonigarcia.wdm.base.BrowserTestParent;
 
 /**
- * Test with Microsoft Edge.
+ * Test with HtmlUnit browser (which uses void driver manager).
  *
  * @author Boni Garcia (boni.gg@gmail.com)
- * @since 1.3.0
+ * @since 1.0.0
  */
-public class EdgeTest extends BrowserTestParent {
+public class HtmlUnitTest extends BrowserTestParent {
+
+    private static Class<? extends WebDriver> webDriverClass;
 
     @BeforeClass
     public static void setupClass() {
-        assumeTrue(IS_OS_WINDOWS);
-        WebDriverManager.edgedriver().avoidPreferences().setup();
+        webDriverClass = HtmlUnitDriver.class;
+        WebDriverManager.getInstance(webDriverClass).setup();
     }
 
     @Before
-    public void setupTest() {
-        ChromeOptions chromeOptions = new ChromeOptions();
-        chromeOptions.setBinary(
-                "C:\\Program Files (x86)\\Microsoft\\Edge Dev\\Application\\msedge.exe");
-        EdgeOptions edgeOptions = new EdgeOptions().merge(chromeOptions);
-        driver = new EdgeDriver(edgeOptions);
+    public void htmlUnitTest()
+            throws InstantiationException, IllegalAccessException {
+        driver = webDriverClass.newInstance();
     }
 
 }

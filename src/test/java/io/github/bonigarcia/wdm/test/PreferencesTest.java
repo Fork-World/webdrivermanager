@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Boni Garcia (http://bonigarcia.github.io/)
+ * (C) Copyright 2018 Boni Garcia (http://bonigarcia.github.io/)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,30 @@
  */
 package io.github.bonigarcia.wdm.test;
 
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static io.github.bonigarcia.wdm.WebDriverManager.chromedriver;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.BeforeClass;
+import java.io.File;
+
 import org.junit.Test;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 
 /**
- * Test with PhantomJS beta.
+ * Test for preferences.
  *
  * @author Boni Garcia (boni.gg@gmail.com)
- * @since 1.4.0
+ * @since 3.0.0
  */
-public class PhantomJsBetaTest {
-
-    @BeforeClass
-    public static void setupClass() {
-        WebDriverManager.phantomjs().useBetaVersions().setup();
-    }
+public class PreferencesTest {
 
     @Test
-    public void testPhantomBeta() {
-        String binaryPath = WebDriverManager.phantomjs().getBinaryPath();
-        assertThat(binaryPath, notNullValue());
+    public void testEmptyTtl() {
+        WebDriverManager.main(new String[] { "clear-preferences" });
+        chromedriver().ttl(0).setup();
+        String binaryPath = chromedriver().getBinaryPath();
+        File binary = new File(binaryPath);
+        assertTrue(binary.exists());
     }
+
 }

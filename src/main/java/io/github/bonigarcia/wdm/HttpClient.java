@@ -17,7 +17,6 @@
 package io.github.bonigarcia.wdm;
 
 import static io.github.bonigarcia.wdm.Config.isNullOrEmpty;
-import static io.github.bonigarcia.wdm.WebDriverManager.config;
 import static java.lang.System.getenv;
 import static java.lang.invoke.MethodHandles.lookup;
 import static java.net.URLDecoder.decode;
@@ -25,7 +24,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Optional.empty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
-import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.apache.http.auth.AuthScope.ANY_REALM;
 import static org.apache.http.client.config.AuthSchemes.NTLM;
 import static org.apache.http.client.config.CookieSpecs.STANDARD;
@@ -49,7 +47,6 @@ import java.util.StringTokenizer;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -59,7 +56,6 @@ import org.apache.http.auth.NTCredentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -84,24 +80,21 @@ public class HttpClient implements Closeable {
 
     final Logger log = getLogger(lookup().lookupClass());
 
+    Config config;
     CloseableHttpClient closeableHttpClient;
-    int timeout;
 
-    public HttpClient(int timeout) {
-        this();
-        this.timeout = (int) SECONDS.toMillis(timeout);
-    }
+    public HttpClient(Config config) {
+        this.config = config;
 
-    public HttpClient() {
         HttpClientBuilder builder = HttpClientBuilder.create()
                 .setConnectionManagerShared(true);
         try {
-            String proxy = config().getProxy();
+            String proxy = config.getProxy();
             Optional<HttpHost> proxyHost = createProxyHttpHost(proxy);
             if (proxyHost.isPresent()) {
                 builder.setProxy(proxyHost.get());
                 Optional<BasicCredentialsProvider> credentialsProvider = createBasicCredentialsProvider(
-                        proxy, config().getProxyUser(), config().getProxyPass(),
+                        proxy, config.getProxyUser(), config.getProxyPass(),
                         proxyHost.get());
                 if (credentialsProvider.isPresent()) {
                     builder.setDefaultCredentialsProvider(
@@ -109,11 +102,8 @@ public class HttpClient implements Closeable {
                 }
             }
 
-            HostnameVerifier allHostsValid = new HostnameVerifier() {
-                public boolean verify(String hostname, SSLSession session) {
-                    return hostname.equalsIgnoreCase(session.getPeerHost());
-                }
-            };
+            HostnameVerifier allHostsValid = (hostname, session) -> hostname
+                    .equalsIgnoreCase(session.getPeerHost());
             SSLContext sslContext = SSLContexts.custom()
                     .loadTrustMaterial(null, new TrustStrategy() {
                         @Override
@@ -137,6 +127,7 @@ public class HttpClient implements Closeable {
         }
 
         closeableHttpClient = builder.useSystemProperties().build();
+
     }
 
     public Optional<Proxy> createProxy(String proxy)
@@ -156,6 +147,8 @@ public class HttpClient implements Closeable {
         HttpGet httpGet = new HttpGet(url.toString());
         httpGet.addHeader("User-Agent", "Mozilla/5.0");
         httpGet.addHeader("Connection", "keep-alive");
+
+        int timeout = (int) SECONDS.toMillis(config.getTimeout());
         RequestConfig requestConfig = custom().setCookieSpec(STANDARD)
                 .setSocketTimeout(timeout).build();
         httpGet.setConfig(requestConfig);
@@ -165,29 +158,22 @@ public class HttpClient implements Closeable {
     public HttpResponse execute(HttpRequestBase method) throws IOException {
         HttpResponse response = closeableHttpClient.execute(method);
         if (response.getStatusLine().getStatusCode() >= SC_BAD_REQUEST) {
-            String errorMessage = "A response error is detected: "
-                    + response.getStatusLine();
+            String errorMessage = "Error HTTP "
+                    + response.getStatusLine().getStatusCode() + " executing "
+                    + method;
             log.error(errorMessage);
             throw new WebDriverManagerException(errorMessage);
         }
         return response;
     }
 
-    public boolean isValid(URL url) throws IOException {
-        HttpResponse response = closeableHttpClient
-                .execute(new HttpOptions(url.toString()));
-        if (response.getStatusLine().getStatusCode() > SC_UNAUTHORIZED) {
-            log.debug("A response error is detected. {}",
-                    response.getStatusLine());
-            return false;
-        }
-        return true;
-    }
-
     private Optional<URL> determineProxyUrl(String proxy)
             throws MalformedURLException {
-        String proxyInput = isNullOrEmpty(proxy) ? getenv("HTTPS_PROXY")
-                : proxy;
+        String proxyFromEnvCaps = getenv("HTTPS_PROXY");
+        String proxyFromEnv = isNullOrEmpty(proxyFromEnvCaps)
+                ? getenv("https_proxy")
+                : proxyFromEnvCaps;
+        String proxyInput = isNullOrEmpty(proxy) ? proxyFromEnv : proxy;
         if (!isNullOrEmpty(proxyInput)) {
             return Optional.of(
                     new URL(proxyInput.matches("^http[s]?://.*$") ? proxyInput

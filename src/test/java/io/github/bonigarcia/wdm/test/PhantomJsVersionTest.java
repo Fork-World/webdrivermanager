@@ -18,11 +18,11 @@ package io.github.bonigarcia.wdm.test;
 
 import org.junit.Before;
 
-import io.github.bonigarcia.wdm.PhantomJsDriverManager;
+import io.github.bonigarcia.wdm.WebDriverManager;
 import io.github.bonigarcia.wdm.base.VersionTestParent;
 
 /**
- * Test asserting PhatomJS versions.
+ * Test asserting PhantomJS versions.
  *
  * @author Boni Garcia (boni.gg@gmail.com)
  * @since 1.4.0
@@ -31,7 +31,7 @@ public class PhantomJsVersionTest extends VersionTestParent {
 
     @Before
     public void setup() {
-        browserManager = PhantomJsDriverManager.getInstance();
+        browserManager = WebDriverManager.phantomjs();
         specificVersions = new String[] { "1.9.7", "2.1.1" };
     }
 
